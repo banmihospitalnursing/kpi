@@ -969,7 +969,10 @@ function escapeInApp() {
   return true;
 }
 
+const APP_VERSION = '2026.10.26-4';
 async function boot() {
+  if ($('ver')) $('ver').textContent = 'เวอร์ชัน ' + APP_VERSION;
+  const gn = document.querySelector('.gate-note'); if (gn) gn.insertAdjacentHTML('beforeend', '<br><span style="opacity:.6">เวอร์ชัน ' + APP_VERSION + '</span>');
   if (escapeInApp()) return;
   initCharts();
   bindEvents();
