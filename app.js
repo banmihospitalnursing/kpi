@@ -98,7 +98,7 @@ function makeDemo(seed) {
   const emit = w => { let v = clone(getP(w.p)); if (w.opt && w.opt.last && v) { const ks = Object.keys(v).sort().slice(-w.opt.last); v = Object.fromEntries(ks.map(k => [k, v[k]])); } w.cb(v ?? null); };
   return {
     demo: true,
-    onAuth(cb) { setTimeout(() => cb({ uid: 'demo', email: SUPER[0] || 'admin@demo', displayName: 'ผู้ดูแล (ตัวอย่าง)', emailVerified: true }), 50); },
+    onAuth(cb) { setTimeout(() => cb({ uid: 'demo', email: 'demo-admin@example.com', displayName: 'ผู้ดูแล (ตัวอย่าง)', emailVerified: true }), 50); },
     async signIn() { }, async signOut() { location.reload(); },
     watch(p, cb, opt) { const w = { p, cb, opt }; watchers.add(w); setTimeout(() => emit(w), 0); return () => watchers.delete(w); },
     async commit(u) { await sleep(250); Object.entries(u).forEach(([p, v]) => setP(p, resolveTS(clone(v)))); watchers.forEach(emit); },
@@ -915,7 +915,14 @@ async function boot() {
   initCharts();
   bindEvents();
   $('eFirst').value = store.get('kpiFirst'); $('eLast').value = store.get('kpiLast');
-  const demo = !(CFG.firebase && CFG.firebase.apiKey);
+  const noCfg = !(CFG.firebase && CFG.firebase.apiKey && CFG.firebase.databaseURL);
+  // โหมดตัวอย่างเปิดได้เฉพาะตอนทดสอบในเครื่อง (file / localhost) หรือ ?demo=1 — เว็บจริงที่ยังไม่ใส่ config จะไม่เปิดเป็น admin ปลอม
+  const local = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|kpi\.test)$/.test(location.hostname) || new URLSearchParams(location.search).has('demo');
+  if (noCfg && !local) {
+    loading(false); showGate('ระบบยังไม่ได้ตั้งค่า: ไฟล์ config.js บนเว็บนี้ยังไม่มีค่า Firebase (apiKey / databaseURL) — ผู้ดูแลต้องอัปโหลด config.js ฉบับที่ใส่ค่าแล้ว');
+    $('btnLogin').hidden = true; return;
+  }
+  const demo = noCfg;
   try { BE = demo ? makeDemo(demoSeed()) : await makeFirebase(CFG.firebase); }
   catch (e) { loading(false); showGate('เชื่อมต่อ Firebase ไม่สำเร็จ: ' + errMsg(e)); return; }
   if (demo) { $('demoBar').hidden = false; document.body.classList.add('is-demo'); }
