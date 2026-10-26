@@ -50,8 +50,9 @@ function toast(t, err) { const el = $('toast'); el.textContent = t; el.className
 function errMsg(e) {
   const s = String((e && (e.code || e.message)) || e);
   if (/PERMISSION_DENIED|permission/i.test(s)) return 'ไม่มีสิทธิ์ทำรายการนี้ (ตรวจสิทธิ์ผู้ใช้ หรือกฎฐานข้อมูล)';
+  if (/POPUP_BLOCKED/.test(s)) return 'เบราว์เซอร์บล็อกหน้าต่างล็อกอิน — อนุญาตป๊อปอัปสำหรับเว็บนี้ หรือเปิดลิงก์ใน Chrome / Safari แล้วลองใหม่';
   if (/popup-closed|cancelled-popup/.test(s)) return 'ยกเลิกการเข้าสู่ระบบ';
-  if (/unauthorized-domain/.test(s)) return 'โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Authentication → Settings → Authorized domains';
+  if (/unauthorized-domain/.test(s)) return 'โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase: Security → Authentication → Settings → Authorized domains';
   if (/network/i.test(s)) return 'เชื่อมต่ออินเทอร์เน็ตไม่ได้';
   return (e && e.message) || s;
 }
@@ -112,13 +113,13 @@ async function makeFirebase(cfg) {
   const [{ initializeApp }, A, D] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-database.js')]);
   const app = initializeApp(cfg), auth = A.getAuth(app), db = D.getDatabase(app);
   D.onValue(D.ref(db, '.info/connected'), s => $('live').classList.toggle('off', s.val() !== true));
-  A.getRedirectResult(auth).catch(e => toast(errMsg(e), true));
   return {
     onAuth: cb => A.onAuthStateChanged(auth, cb),
     async signIn() {
       const p = new A.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
+      // ใช้ popup อย่างเดียว: redirect ใช้ไม่ได้บน iPhone/Safari และเบราว์เซอร์ในแอป (สถานะหายระหว่างโดเมน)
       try { await A.signInWithPopup(auth, p); }
-      catch (e) { if (/popup-blocked|operation-not-supported/.test(e.code || '')) await A.signInWithRedirect(auth, p); else throw e; }
+      catch (e) { if (/popup-blocked|operation-not-supported|web-storage-unsupported/.test(e.code || '')) throw new Error('POPUP_BLOCKED'); throw e; }
     },
     signOut: () => A.signOut(auth),
     watch(p, cb, opt) {
@@ -300,7 +301,9 @@ function renderSummary() {
     g = wards.map(w => ({ label: WARD[w].name, full: WARD[w].name, ward: w, ...countOf(P.filter(p => p.w === w)) }));
     $('chTitle').textContent = 'ร้อยละผ่านเกณฑ์ รายหน่วยงาน (กดแท่งเพื่อดูค่า KPI)'; chMain.options.indexAxis = 'y';
   }
-  chMain.$meta = g; chMain.data.labels = g.map(x => x.label);
+  const box = $('cMain').parentNode, narrow = box.clientWidth < 520, horiz = chMain.options.indexAxis === 'y';
+  box.style.height = (horiz ? Math.max(220, g.length * (narrow ? 40 : 30) + 50) : 300) + 'px';
+  chMain.$meta = g; chMain.data.labels = g.map(x => horiz ? wrapLabel(narrow ? (x.label.replace(/^การพยาบาล\s*/, '') || x.label) : x.label, narrow ? 13 : 24) : x.label);
   chMain.data.datasets[0].data = g.map(x => x.rate ?? 0);
   chMain.data.datasets[0].backgroundColor = g.map(x => x.rate == null ? '#cbd5e1' : rateColor(x.rate));
   chMain.update();
@@ -333,11 +336,40 @@ function selectWard(w, scroll) {
   renderDash();
   if (selWard && scroll) document.querySelector('.scope').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+/** ตัดชื่อยาวเป็น 2 บรรทัดตามคำภาษาไทย (Intl.Segmenter) เพื่อให้อ่านได้บนมือถือ */
+function wrapLabel(s, max) {
+  s = String(s || ''); if (s.length <= max) return s;
+  const parts = (window.Intl && Intl.Segmenter) ? [...new Intl.Segmenter('th', { granularity: 'word' }).segment(s)].map(x => x.segment) : s.split(/(\s+)/);
+  const lines = []; let cur = '';
+  parts.forEach(w => { if (cur && (cur + w).trim().length > max) { lines.push(cur.trim()); cur = w; } else cur += w; });
+  if (cur.trim()) lines.push(cur.trim());
+  if (lines.length > 2) { lines.length = 2; lines[1] = lines[1].slice(0, max - 1) + '…'; }
+  return lines;
+}
+/** ตัวเลข % ที่ปลายแท่ง */
+const valueLabels = {
+  id: 'valueLabels',
+  afterDatasetsDraw(c) {
+    if (!c.$meta) return;
+    const ctx = c.ctx, bars = c.getDatasetMeta(0).data, horiz = c.options.indexAxis === 'y', small = c.width < 480;
+    ctx.save(); ctx.font = `600 ${small ? 12 : 13}px Sarabun, sans-serif`;
+    bars.forEach((bar, i) => {
+      const m = c.$meta[i]; if (!m) return;
+      const t = m.rate == null ? '—' : m.rate + '%', w = ctx.measureText(t).width;
+      if (horiz) {
+        const inside = bar.x + 6 + w > c.chartArea.right;
+        ctx.textBaseline = 'middle'; ctx.textAlign = inside ? 'right' : 'left'; ctx.fillStyle = inside ? '#fff' : '#16303f';
+        ctx.fillText(t, inside ? bar.x - 6 : bar.x + 6, bar.y);
+      } else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = '#16303f'; ctx.fillText(t, bar.x, bar.y - 4); }
+    });
+    ctx.restore();
+  }
+};
 function initCharts() {
   Chart.defaults.font.family = "'Sarabun',sans-serif"; Chart.defaults.color = '#5f7684';
   chMain = new Chart($('cMain'), {
-    type: 'bar', data: { labels: [], datasets: [{ data: [], borderRadius: 6, maxBarThickness: 28 }] },
-    options: { maintainAspectRatio: false, indexAxis: 'y', scales: {},
+    type: 'bar', plugins: [valueLabels], data: { labels: [], datasets: [{ data: [], borderRadius: 6, maxBarThickness: 28, categoryPercentage: .8, barPercentage: .9 }] },
+    options: { maintainAspectRatio: false, indexAxis: 'y', scales: {}, layout: { padding: { right: 8, top: 18 } },
       plugins: { legend: { display: false }, tooltip: { callbacks: {
         title: c => chMain.$meta[c[0].dataIndex].full,
         label: c => { const m = chMain.$meta[c.dataIndex]; return m.ev ? [` ผ่านเกณฑ์ ${m.rate}% (${m.pass}/${m.ev})`, ` บันทึกแล้ว ${m.all - m.wait}/${m.all} ตัวชี้วัด`] : ` ยังไม่มีผลที่ประเมินได้ (บันทึก ${m.all - m.wait}/${m.all})`; } } } },
@@ -345,7 +377,8 @@ function initCharts() {
       onClick: (e, els) => { if (els.length && !selWard) selectWard(chMain.$meta[els[0].index].ward, true); } }
   });
   const pct = { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: '#edf3f5' } };
-  const cat = { grid: { display: false }, ticks: { autoSkip: false, font: { size: 12 } } };
+  const cat = { grid: { display: false }, ticks: { autoSkip: false, color: '#16303f', font: () => ({ size: chMain && chMain.width < 480 ? 12 : 13 }) },
+    afterFit: sc => { if (sc.axis === 'y') sc.width = Math.min(Math.max(sc.width, 96), sc.chart.width * 0.46); } };
   const up = chMain.update.bind(chMain);
   chMain.update = function () { const h = this.options.indexAxis === 'y'; this.options.scales = { x: h ? pct : cat, y: h ? cat : pct }; up(); };
   chDonut = new Chart($('cDonut'), { type: 'doughnut', data: { labels: ['ผ่านเกณฑ์', 'ไม่ผ่านเกณฑ์', 'ไม่มีเกณฑ์', 'ยังไม่บันทึก'],
@@ -911,7 +944,33 @@ function startApp() {
   UNSUB.meta = BE.watch('meta', v => { RAW.meta = v; buildMeta(v); onData('meta'); });
   watchYear();
 }
+/** เบราว์เซอร์ในแอป (LINE, Facebook, Messenger, Instagram, WeChat, Android WebView) — Google ไม่อนุญาตให้ล็อกอินในนี้ */
+function inAppBrowser() {
+  const ua = navigator.userAgent || '';
+  if (/\bLine\//i.test(ua)) return 'LINE';
+  if (/FBAN|FBAV|FB_IAB|Messenger/i.test(ua)) return 'Facebook';
+  if (/Instagram/i.test(ua)) return 'Instagram';
+  if (/MicroMessenger/i.test(ua)) return 'WeChat';
+  if (/; wv\)/.test(ua)) return 'แอป';
+  return '';
+}
+function escapeInApp() {
+  const app = inAppBrowser(); if (!app) return false;
+  const u = new URL(location.href);
+  if (app === 'LINE' && !u.searchParams.has('openExternalBrowser')) {   // LINE รองรับพารามิเตอร์นี้: เปิดใน Safari/Chrome ให้อัตโนมัติ
+    u.searchParams.set('openExternalBrowser', '1'); location.replace(u.toString()); return true;
+  }
+  const clean = new URL(location.href); clean.searchParams.delete('openExternalBrowser');
+  loading(false); $('app').hidden = true; $('gate').hidden = false; $('btnLogin').hidden = true;
+  $('gateDeny').hidden = false;
+  $('gateDeny').innerHTML = `กำลังเปิดในเบราว์เซอร์ของ <b>${esc(app)}</b> ซึ่ง Google ไม่อนุญาตให้ล็อกอิน<br>กด <b>⋯</b> หรือ <b>แชร์</b> แล้วเลือก <b>เปิดใน Safari / Chrome</b> หรือคัดลอกลิงก์ไปเปิดเอง`;
+  $('gateMsg').innerHTML = `<button class="btn btn-primary" id="btnCopyUrl" type="button" style="width:100%">คัดลอกลิงก์</button>`;
+  $('btnCopyUrl').onclick = async () => { try { await navigator.clipboard.writeText(clean.toString()); toast('คัดลอกลิงก์แล้ว นำไปวางใน Safari / Chrome'); } catch (e) { prompt('คัดลอกลิงก์นี้', clean.toString()); } };
+  return true;
+}
+
 async function boot() {
+  if (escapeInApp()) return;
   initCharts();
   bindEvents();
   $('eFirst').value = store.get('kpiFirst'); $('eLast').value = store.get('kpiLast');
