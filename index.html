@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KPI กลุ่มการพยาบาล</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%230f8b8d'/%3E%3Crect x='16' y='7' width='8' height='26' rx='2' fill='white'/%3E%3Crect x='7' y='16' width='26' height='8' rx='2' fill='white'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+
+<div class="loader" id="loader"><div><span class="spin"></span><span id="loaderTxt">กำลังเชื่อมต่อ…</span></div></div>
+
+<!-- ======================= หน้าเข้าสู่ระบบ ======================= -->
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <div class="gate-top">
+      <div class="logo"><svg viewBox="0 0 40 40"><rect x="14" y="4" width="12" height="32" rx="3" fill="#0f8b8d"/><rect x="4" y="14" width="32" height="12" rx="3" fill="#0f8b8d"/><path d="M8 20h7l2-4 3 8 2-4h10" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h1>ตัวชี้วัดคุณภาพ กลุ่มการพยาบาล</h1>
+      <p>Nursing Quality Indicators</p>
+    </div>
+    <div class="gate-body">
+      <div class="deny" id="gateDeny" hidden></div>
+      <p id="gateMsg">เข้าสู่ระบบด้วยบัญชี Google ที่ได้รับสิทธิ์ (เช่น อีเมลของวอร์ด)</p>
+      <button class="gbtn" id="btnLogin" type="button">
+        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+        <span id="btnLoginTxt">เข้าสู่ระบบด้วย Google</span>
+      </button>
+      <button class="btn btn-ghost" id="btnGateOut" type="button" style="width:100%;margin-top:10px" hidden>ออกจากระบบ / เปลี่ยนบัญชี</button>
+      <div class="gate-note">หากยังไม่มีสิทธิ์ แจ้งผู้ดูแลระบบให้เพิ่มอีเมลของคุณ</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= แอป ======================= -->
+<div id="app" hidden>
+<header>
+  <div class="hwrap">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 40 40"><rect x="14" y="4" width="12" height="32" rx="3" fill="#0f8b8d"/><rect x="4" y="14" width="32" height="12" rx="3" fill="#0f8b8d"/><path d="M8 20h7l2-4 3 8 2-4h10" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div>
+      <h1>ตัวชี้วัดคุณภาพ กลุ่มการพยาบาล</h1>
+      <p>Nursing Quality Indicators · ติดตามผลการดำเนินงานรายหน่วยงาน</p>
+    </div>
+    <div class="hright">
+      <span class="live" id="live" title="ข้อมูลอัปเดตแบบเรียลไทม์"><i></i><span>เรียลไทม์</span></span>
+      <div class="me" id="me">
+        <button class="me-btn" id="meBtn" type="button"><span class="av" id="meAv">?</span><span class="nm"><span id="meName">-</span><small id="meRole">-</small></span></button>
+        <div class="me-menu" id="meMenu" hidden>
+          <div class="em" id="meEmail"></div>
+          <button type="button" id="btnLogout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>ออกจากระบบ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist">
+    <button class="tab on" data-v="dash" role="tab"><span class="no">1</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      <span>แดชบอร์ด<span class="lbl-long">แสดงผล</span></span></button>
+    <button class="tab" data-v="entry" role="tab" data-need="edit"><span class="no">2</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+      <span>บันทึกข้อมูล<span class="lbl-long">ตัวชี้วัด</span></span><span class="dot" title="มีข้อมูลที่ยังไม่บันทึก"></span></button>
+    <button class="tab" data-v="log" role="tab" data-need="edit"><span class="no">3</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><path d="M3 4v5h5"/></svg>
+      <span>Log<span class="lbl-long"> ผู้ลงข้อมูล</span></span></button>
+    <button class="tab" data-v="set" role="tab" data-need="admin"><span class="no">4</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      <span>ตั้งค่า<span class="lbl-long">ข้อมูลพื้นฐาน</span></span></button>
+  </nav>
+  <svg class="pulse" viewBox="0 0 1200 60" preserveAspectRatio="none"><path d="M0 30 H300 l20 -22 l20 44 l20 -44 l14 22 H620 l18 -26 l22 52 l18 -26 H900 l16 -18 l16 36 l12 -18 H1200"/></svg>
+</header>
+
+<main>
+<!-- ======================= 1. แดชบอร์ด ======================= -->
+<div class="view" id="vDash">
+  <section class="panel grid fDash">
+    <div class="f"><label>ปีงบประมาณ</label><select id="fYear" data-year></select></div>
+    <div class="f"><label>เดือน</label><select id="fMonth"></select></div>
+    <div class="f"><label>มิติ</label><select id="fDim"></select></div>
+    <div class="f"><label>ค้นหาตัวชี้วัด</label><input id="fSearch" placeholder="ชื่อหรือรหัสตัวชี้วัด…"></div>
+  </section>
+
+  <section class="panel">
+    <div class="phead"><h2 class="ph">เลือกหน่วยงาน</h2><div class="chips" id="gChips"></div></div>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <div class="scope">
+    <h2 id="scopeTitle">ภาพรวมทุกหน่วยงาน</h2><span class="tagg" id="scopeTag"></span>
+    <button class="btn btn-ghost btn-sm clr" id="btnClear" type="button" hidden>← กลับภาพรวม</button>
+  </div>
+  <section class="stats">
+    <div class="stat s-all"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3M9 11h6M9 15h4"/></svg></div><div><div class="n" id="nAll">0</div><div class="t">ตัวชี้วัดทั้งหมด</div></div></div>
+    <div class="stat s-pass"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></div><div><div class="n" id="nPass">0</div><div class="t">ผ่านเกณฑ์</div></div></div>
+    <div class="stat s-fail"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg></div><div><div class="n" id="nFail">0</div><div class="t">ไม่ผ่านเกณฑ์</div></div></div>
+    <div class="stat s-wait"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><div class="n" id="nWait">0</div><div class="t">ยังไม่บันทึกผลงาน</div></div></div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel"><h2 class="ph" id="chTitle">ร้อยละผ่านเกณฑ์ รายหน่วยงาน</h2><div class="chartbox"><canvas id="cMain"></canvas></div></div>
+    <div class="panel"><h2 class="ph">ภาพรวมผลการประเมิน</h2>
+      <div class="donutbox"><canvas id="cDonut"></canvas><div class="donut-c"><div><b id="dRate">0%</b><span>ผ่านเกณฑ์</span></div></div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div id="kpiPick" class="pick">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M10 9h4M12 7v4M9 21v-5h6v5"/></svg>
+      <h3>เลือกหน่วยงานด้านบนเพื่อดูค่าตัวชี้วัด</h3>
+      <div>กดที่การ์ดหน่วยงาน หรือกดแท่งกราฟของหน่วยงาน ระบบจะแสดงผลงานรายเดือนของทุกตัวชี้วัดที่นี่</div>
+    </div>
+    <div id="kpiBox" hidden>
+      <div class="phead">
+        <h2 class="ph" id="kTitle">ค่าตัวชี้วัด</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="chips" id="sChips">
+            <button class="chip on" data-s="all">ทั้งหมด</button>
+            <button class="chip" data-s="pass">ผ่าน</button>
+            <button class="chip" data-s="fail">ไม่ผ่าน</button>
+            <button class="chip" data-s="wait">ยังไม่บันทึก</button>
+            <button class="chip" data-s="none">ไม่มีเกณฑ์</button>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btnWardEntry" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            บันทึกผลงานหน่วยงานนี้</button>
+        </div>
+      </div>
+      <div class="twrap"><table class="mx" id="mx"></table></div>
+      <div class="legend">
+        <span><i style="background:var(--green-l);border:1px solid #bfe6cd"></i>ผ่านเกณฑ์</span>
+        <span><i style="background:var(--red-l);border:1px solid #f3c2c2"></i>ไม่ผ่านเกณฑ์</span>
+        <span><i style="background:#fff;border:1px solid var(--line)"></i>ไม่มีเกณฑ์</span>
+        <span>· ยังไม่บันทึก</span><span>กดที่แถวเพื่อดูกราฟแนวโน้ม</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ======================= 2. บันทึกข้อมูลตัวชี้วัด ======================= -->
+<div class="view" id="vEntry" hidden>
+  <section class="panel who">
+    <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+    <div class="grid">
+      <div class="f"><label>ชื่อผู้บันทึก <em>*</em></label><input id="eFirst" placeholder="ชื่อ" autocomplete="given-name"></div>
+      <div class="f"><label>นามสกุล <em>*</em></label><input id="eLast" placeholder="นามสกุล" autocomplete="family-name"></div>
+    </div>
+    <div class="hint" id="whoHint">ระบบบันทึกชื่อ-นามสกุล อีเมลที่ล็อกอิน และเวลาจากเซิร์ฟเวอร์ทุกครั้งที่กดบันทึก</div>
+  </section>
+
+  <section class="panel grid esel">
+    <div class="f g"><label><span class="no">1</span>กลุ่มงาน</label><select id="eGroup"></select></div>
+    <div class="f w"><label><span class="no">2</span>หน่วยงาน</label><select id="eWard"></select></div>
+    <div class="f"><label>ปีงบประมาณ</label><select id="eYear" data-year></select></div>
+    <div class="f"><label>เดือน</label><select id="eMonth"></select></div>
+    <div class="f k"><label><span class="no">3</span>ตัวชี้วัดของหน่วยงาน</label><select id="eKpi"></select></div>
+  </section>
+
+  <section class="panel" id="eList"></section>
+
+  <div class="efoot">
+    <div class="prog"><small id="eProgTxt">กรอกแล้ว 0 / 0 ตัวชี้วัด</small><div class="bar"><i id="eProg" style="width:0"></i></div></div>
+    <button class="btn btn-ghost" type="button" id="btnReset" disabled>ยกเลิกการแก้ไข</button>
+    <button class="btn btn-primary" type="button" id="btnSave" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>
+      <span id="btnSaveTxt">บันทึก</span>
+    </button>
+  </div>
+</div>
+
+<!-- ======================= 3. Log ผู้ลงข้อมูล ======================= -->
+<div class="view" id="vLog" hidden>
+  <section class="panel grid fLog">
+    <div class="f"><label>ปีงบประมาณ</label><select id="lYear" data-year></select></div>
+    <div class="f"><label>หน่วยงาน</label><select id="lWard"></select></div>
+    <div class="f"><label>เดือน</label><select id="lMonth"></select></div>
+    <div class="f"><label>ผู้บันทึก</label><select id="lBy"></select></div>
+    <div class="f"><label>ค้นหา</label><input id="lSearch" placeholder="ตัวชี้วัด / รหัส / ชื่อผู้บันทึก…"></div>
+  </section>
+
+  <section class="panel">
+    <div class="phead">
+      <div class="chips" id="lMode">
+        <button class="chip on" data-m="rec">ข้อมูลที่บันทึกไว้ (แก้ไข / ลบได้)</button>
+        <button class="chip" data-m="hist">ประวัติการเพิ่ม / แก้ไข / ลบ</button>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span class="lsum" id="lSum"></span>
+        <button class="btn btn-ghost btn-sm" id="btnLogXlsx" type="button">⬇ Excel</button>
+      </div>
+    </div>
+    <div class="selbar" id="selBar" hidden>
+      <b id="selTxt">เลือก 0 รายการ</b>
+      <button class="btn btn-danger btn-sm" id="btnDelSel" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+        ลบรายการที่เลือก</button>
+      <button class="btn btn-ghost btn-sm" id="btnSelClear" type="button">ยกเลิกการเลือก</button>
+    </div>
+    <div class="twrap"><table class="lt" id="lt"></table></div>
+    <div style="text-align:center;margin-top:12px"><button class="btn btn-ghost btn-sm" id="btnLMore" type="button" hidden>แสดงเพิ่มเติม</button></div>
+  </section>
+</div>
+
+<!-- ======================= 4. ตั้งค่า (admin) ======================= -->
+<div class="view" id="vSet" hidden>
+  <section class="panel">
+    <div class="chips stabs" id="sTabs">
+      <button class="chip on" data-s="ward">หน่วยงาน / กลุ่มงาน</button>
+      <button class="chip" data-s="dim">มิติ</button>
+      <button class="chip" data-s="kpi">ตัวชี้วัด</button>
+      <button class="chip" data-s="user">ผู้ใช้งาน / สิทธิ์</button>
+      <button class="chip" data-s="io">นำเข้า / ส่งออก</button>
+    </div>
+  </section>
+
+  <!-- หน่วยงาน -->
+  <section class="panel st-sec" id="sWard">
+    <div class="phead"><h2 class="ph">หน่วยงานและกลุ่มงาน</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" id="btnWardNew" type="button">+ เพิ่มหน่วยงาน</button></div></div>
+    <div class="note">แก้ชื่อหน่วยงาน กลุ่มงาน หรือลำดับการแสดงผลในตารางได้เลย แล้วกด <b>บันทึกการเปลี่ยนแปลง</b> · การเปลี่ยนชื่อไม่กระทบผลงานเดิม (ระบบอ้างอิงด้วยรหัสภายใน) · <b>กลุ่มงานใหม่</b> = พิมพ์ชื่อกลุ่มใหม่ในช่องกลุ่มงาน</div>
+    <div class="twrap"><table class="tbl" id="wardTbl"></table></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px"><button class="btn btn-ghost" id="btnWardUndo" type="button">ยกเลิก</button><button class="btn btn-primary" id="btnWardSave" type="button">บันทึกการเปลี่ยนแปลง</button></div>
+  </section>
+
+  <!-- มิติ -->
+  <section class="panel st-sec" id="sDim" hidden>
+    <div class="phead"><h2 class="ph">มิติ</h2><button class="btn btn-primary btn-sm" id="btnDimAdd" type="button">+ เพิ่มมิติ</button></div>
+    <div class="note">รหัสมิติคือค่าที่ตัวชี้วัดอ้างถึง (เช่น 1, 2, 7) · ชื่อมิติใช้แสดงผลทุกหน้า</div>
+    <div class="twrap"><table class="tbl" id="dimTbl"></table></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px"><button class="btn btn-ghost" id="btnDimUndo" type="button">ยกเลิก</button><button class="btn btn-primary" id="btnDimSave" type="button">บันทึกการเปลี่ยนแปลง</button></div>
+  </section>
+
+  <!-- ตัวชี้วัด -->
+  <section class="panel st-sec" id="sKpi" hidden>
+    <div class="phead"><h2 class="ph">ตัวชี้วัด <span class="count-badge" id="kpiCount">0</span></h2><button class="btn btn-primary btn-sm" id="btnKpiNew" type="button">+ เพิ่มตัวชี้วัด</button></div>
+    <div class="grid" style="grid-template-columns:1.2fr 1fr 1.6fr">
+      <div class="f"><label>หน่วยงาน</label><select id="kWard"></select></div>
+      <div class="f"><label>มิติ</label><select id="kDim"></select></div>
+      <div class="f"><label>ค้นหา</label><input id="kSearch" placeholder="ชื่อ / รหัสตัวชี้วัด…"></div>
+    </div>
+    <div class="twrap"><table class="tbl" id="kpiTbl"></table></div>
+    <div style="text-align:center"><button class="btn btn-ghost btn-sm" id="btnKMore" type="button" hidden>แสดงเพิ่มเติม</button></div>
+  </section>
+
+  <!-- ผู้ใช้งาน -->
+  <section class="panel st-sec" id="sUser" hidden>
+    <div class="phead"><h2 class="ph">ผู้ใช้งานและสิทธิ์</h2><button class="btn btn-primary btn-sm" id="btnUserNew" type="button">+ เพิ่มผู้ใช้</button></div>
+    <div class="note"><b>admin</b> แก้ได้ทุกอย่างรวมถึงหน้าตั้งค่า · <b>editor</b> ลง/แก้/ลบผลงานเฉพาะหน่วยงานที่กำหนด และดู Log · <b>viewer</b> ดูแดชบอร์ดอย่างเดียว · อีเมลต้องเป็นบัญชี Google (Gmail หรือ Google Workspace)</div>
+    <div class="twrap"><table class="tbl" id="userTbl"></table></div>
+  </section>
+
+  <!-- นำเข้า / ส่งออก -->
+  <section class="panel st-sec" id="sIo" hidden>
+    <h2 class="ph">นำเข้าข้อมูลพื้นฐานจาก Excel</h2>
+    <div class="note">ใช้ไฟล์ preKPI ที่ดาวน์โหลดจาก Google Sheets (ไฟล์ → ดาวน์โหลด → Microsoft Excel .xlsx) · ระบบอ่านแท็บ <b>KPI</b>, <b>Wards</b>, <b>มิติ</b> (ถ้ามี) และ <b>ผลงาน</b> (ถ้ามี) โดยหาคอลัมน์จากชื่อหัวคอลัมน์</div>
+    <label class="drop" id="drop">
+      <input type="file" id="fileXlsx" accept=".xlsx,.xls" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
+      <div><b>คลิกเพื่อเลือกไฟล์ หรือ ลากไฟล์ .xlsx มาวาง</b></div>
+    </label>
+    <div id="ioPreview" hidden class="card-soft">
+      <div class="kv" id="ioKv"></div>
+      <div class="warn" id="ioWarn" style="margin-top:12px" hidden></div>
+      <div style="margin-top:12px;display:grid;gap:8px">
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ioMeta" checked> แทนที่ข้อมูลพื้นฐานทั้งหมด (หน่วยงาน กลุ่มงาน มิติ ตัวชี้วัด) ด้วยข้อมูลจากไฟล์</label>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ioRes"> นำเข้าผลงานจากแท็บ "ผลงาน" ด้วย (ถ้ามีข้อมูลเดือนเดียวกันอยู่แล้วจะถูกเขียนทับ)</label>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px"><button class="btn btn-ghost" id="btnIoCancel" type="button">ยกเลิก</button><button class="btn btn-primary" id="btnIoGo" type="button">นำเข้าข้อมูล</button></div>
+    </div>
+    <h2 class="ph" style="margin-top:22px">ส่งออกเป็น Excel</h2>
+    <div class="note">ดาวน์โหลดข้อมูลพื้นฐานทั้งหมด + ผลงานและ Log ของปีงบประมาณที่เลือก ใช้สำรองข้อมูลหรือทำรายงานต่อ</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+      <div class="f" style="width:160px"><label>ปีงบประมาณ</label><select id="xYear" data-year></select></div>
+      <button class="btn btn-primary" id="btnExport" type="button">⬇ ดาวน์โหลด Excel</button>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer>กลุ่มการพยาบาล · <b>ใส่ใจคุณภาพ ปลอดภัย ผู้ป่วยเป็นศูนย์กลาง</b></footer>
+</div>
+
+<!-- ===== รายละเอียดตัวชี้วัด ===== -->
+<div class="modal" id="mDetail" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <div class="sheet-h">
+      <div class="cross"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg></div>
+      <div><h3 id="dTitle">ตัวชี้วัด</h3><p id="dSub"></p></div>
+      <button class="x" type="button" data-close="mDetail" aria-label="ปิด">×</button>
+    </div>
+    <div class="sheet-b" id="dBody"></div>
+  </div>
+</div>
+
+<!-- ===== ยืนยันการลบผลงาน ===== -->
+<div class="modal" id="mDel" role="dialog" aria-modal="true">
+  <div class="sheet sm">
+    <div class="sheet-h red">
+      <div class="cross"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></div>
+      <div><h3 id="delTitle">ยืนยันการลบข้อมูล</h3><p>ข้อมูลจะถูกลบ และเก็บประวัติพร้อมค่าเดิมไว้ใน Log</p></div>
+      <button class="x" type="button" data-close="mDel" aria-label="ปิด">×</button>
+    </div>
+    <div class="sheet-b">
+      <ul class="dlist" id="delList"></ul>
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div class="f"><label>ชื่อผู้ลบ <em>*</em></label><input id="dFirst" placeholder="ชื่อ"></div>
+        <div class="f"><label>นามสกุล <em>*</em></label><input id="dLast" placeholder="นามสกุล"></div>
+      </div>
+    </div>
+    <div class="sheet-f">
+      <button class="btn btn-ghost" type="button" data-close="mDel">ยกเลิก</button>
+      <button class="btn btn-danger" type="button" id="btnDelOk">ลบข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== เพิ่มหน่วยงาน ===== -->
+<div class="modal" id="mWard" role="dialog" aria-modal="true">
+  <div class="sheet sm">
+    <div class="sheet-h">
+      <div class="cross"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M12 9v6M9 12h6"/></svg></div>
+      <div><h3>เพิ่มหน่วยงานใหม่</h3><p>สร้างหน่วยงาน และคัดลอกชุดตัวชี้วัดจากหน่วยงานเดิมได้</p></div>
+      <button class="x" type="button" data-close="mWard" aria-label="ปิด">×</button>
+    </div>
+    <div class="sheet-b grid">
+      <div class="f"><label>ชื่อหน่วยงาน <em>*</em></label><input id="nwName" placeholder="เช่น หอผู้ป่วยพิเศษ 1"></div>
+      <div class="f"><label>กลุ่มงาน <em>*</em></label><input id="nwGroup" list="dlGroups" placeholder="เลือกหรือพิมพ์กลุ่มงานใหม่"></div>
+      <div class="f"><label>คัดลอกชุดตัวชี้วัดจาก</label><select id="nwCopy"></select></div>
+      <div class="f" id="nwPrefixBox" hidden><label>รหัสนำหน้า KPI_ID ใหม่ <em>*</em></label><input id="nwPrefix" placeholder="เช่น KVIP"><div class="sub" id="nwPrefixEx"></div></div>
+    </div>
+    <div class="sheet-f">
+      <button class="btn btn-ghost" type="button" data-close="mWard">ยกเลิก</button>
+      <button class="btn btn-primary" type="button" id="btnNwOk">เพิ่มหน่วยงาน</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== แก้ไขตัวชี้วัด ===== -->
+<div class="modal" id="mKpi" role="dialog" aria-modal="true">
+  <div class="sheet lg">
+    <div class="sheet-h">
+      <div class="cross"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3M9 11h6M9 15h4"/></svg></div>
+      <div><h3 id="kmTitle">ตัวชี้วัด</h3><p id="kmSub">กรอกข้อมูลตัวชี้วัด</p></div>
+      <button class="x" type="button" data-close="mKpi" aria-label="ปิด">×</button>
+    </div>
+    <div class="sheet-b fgrid">
+      <div class="f"><label>KPI_ID <em>*</em></label><input id="kmId" placeholder="เช่น KMWDM45"></div>
+      <div class="f"><label>มิติ <em>*</em></label><select id="kmDim"></select></div>
+      <div class="f"><label>หน่วย</label><input id="kmUnit" list="dlUnits" placeholder="ร้อยละ / อัตรา / จำนวน"></div>
+      <div class="f"><label>ตัวคูณ</label><input id="kmMult" inputmode="decimal" placeholder="เช่น 100"></div>
+      <div class="f s4"><label>ชื่อตัวชี้วัด <em>*</em></label><input id="kmName"></div>
+      <div class="f s2"><label>เป้าหมาย</label><input id="kmTarget" placeholder="เช่น มากกว่าหรือเท่ากับร้อยละ 80"><div class="tgtp" id="kmTgtP"></div></div>
+      <div class="f s2"><label>หมายเหตุการนับ</label><input id="kmNote"></div>
+      <div class="f s2"><label>ชื่อตัวตั้ง</label><input id="kmNum"></div>
+      <div class="f s2"><label>ชื่อตัวหาร <span class="sub">(เว้นว่าง = กรอกผลงานช่องเดียว)</span></label><input id="kmDen"></div>
+      <div class="f s2"><label>นิยามตัวตั้ง</label><textarea id="kmDefN"></textarea></div>
+      <div class="f s2"><label>นิยามตัวหาร</label><textarea id="kmDefD"></textarea></div>
+      <div class="f s4"><label>หน่วยงานที่ใช้ตัวชี้วัดนี้ <em>*</em></label>
+        <label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-weight:600"><input type="checkbox" id="kmAll"> ทุกหน่วยงาน (รวมหน่วยงานที่เพิ่มในอนาคต)</label>
+        <div class="wgrid" id="kmWards"></div></div>
+    </div>
+    <div class="sheet-f">
+      <button class="btn btn-danger" type="button" id="btnKmDel" style="margin-right:auto">ลบตัวชี้วัด</button>
+      <button class="btn btn-ghost" type="button" data-close="mKpi">ยกเลิก</button>
+      <button class="btn btn-primary" type="button" id="btnKmOk">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ผู้ใช้งาน ===== -->
+<div class="modal" id="mUser" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <div class="sheet-h">
+      <div class="cross"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+      <div><h3 id="umTitle">ผู้ใช้งาน</h3><p>กำหนดอีเมลและสิทธิ์</p></div>
+      <button class="x" type="button" data-close="mUser" aria-label="ปิด">×</button>
+    </div>
+    <div class="sheet-b grid" style="grid-template-columns:1.4fr 1fr .8fr">
+      <div class="f"><label>อีเมล (บัญชี Google) <em>*</em></label><input id="umEmail" type="email" placeholder="ward.example@gmail.com"></div>
+      <div class="f"><label>ชื่อเรียก</label><input id="umName" placeholder="เช่น วอร์ดอายุรกรรมชาย"></div>
+      <div class="f"><label>สิทธิ์ <em>*</em></label><select id="umRole"><option value="editor">editor</option><option value="viewer">viewer</option><option value="admin">admin</option></select></div>
+      <div class="f" style="grid-column:1/-1" id="umWardBox"><label>หน่วยงานที่ลงข้อมูลได้</label>
+        <label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-weight:600"><input type="checkbox" id="umAll"> ทุกหน่วยงาน</label>
+        <div class="wgrid" id="umWards"></div></div>
+    </div>
+    <div class="sheet-f">
+      <button class="btn btn-danger" type="button" id="btnUmDel" style="margin-right:auto">ลบผู้ใช้</button>
+      <button class="btn btn-ghost" type="button" data-close="mUser">ยกเลิก</button>
+      <button class="btn btn-primary" type="button" id="btnUmOk">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="dlGroups"></datalist>
+<datalist id="dlUnits"><option value="ร้อยละ"><option value="อัตรา"><option value="จำนวน"><option value="ค่าเฉลี่ย"></datalist>
+<div class="toast" id="toast"></div>
+<div class="demo" id="demoBar" hidden>⚠️ <b>โหมดตัวอย่าง</b> — ยังไม่ได้ใส่ค่า Firebase ใน config.js จึงแสดงข้อมูลจำลอง (สิทธิ์ admin) ข้อมูลที่แก้จะหายเมื่อรีเฟรช</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
