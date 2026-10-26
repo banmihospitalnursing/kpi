@@ -299,11 +299,26 @@ function renderSummary() {
     $('chTitle').textContent = 'ร้อยละผ่านเกณฑ์ รายมิติ'; chMain.options.indexAxis = 'x';
   } else {
     g = wards.map(w => ({ label: WARD[w].name, full: WARD[w].name, ward: w, ...countOf(P.filter(p => p.w === w)) }));
-    $('chTitle').textContent = 'ร้อยละผ่านเกณฑ์ รายหน่วยงาน (กดแท่งเพื่อดูค่า KPI)'; chMain.options.indexAxis = 'y';
+    $('chTitle').textContent = 'ร้อยละผ่านเกณฑ์ รายหน่วยงาน (กดเพื่อดูค่า KPI)'; chMain.options.indexAxis = 'y';
   }
-  const box = $('cMain').parentNode, narrow = box.clientWidth < 520, horiz = chMain.options.indexAxis === 'y';
-  box.style.height = (horiz ? Math.max(220, g.length * (narrow ? 40 : 30) + 50) : 300) + 'px';
-  chMain.$meta = g; chMain.data.labels = g.map(x => horiz ? wrapLabel(narrow ? (x.label.replace(/^การพยาบาล\s*/, '') || x.label) : x.label, narrow ? 13 : 24) : x.label);
+  const box = $('cMain').parentNode, horiz = !selWard;
+  let hb = $('hBars');
+  if (!hb) { hb = document.createElement('div'); hb.id = 'hBars'; hb.className = 'hbars'; box.after(hb);
+    hb.addEventListener('click', e => { const r = e.target.closest('.hb'); if (r) selectWard(r.dataset.w, true); }); }
+  box.hidden = horiz; hb.hidden = !horiz;
+  if (horiz) {
+    // รายหน่วยงาน: แถบแบบ HTML (ตัวหนังสือคมชัด ตัดบรรทัดเองทุกเบราว์เซอร์ รวม Safari บน iPhone)
+    hb.innerHTML = g.map(x => {
+      const pct = x.rate == null ? 0 : x.rate, col = x.rate == null ? '#cbd5e1' : rateColor(x.rate);
+      return `<button type="button" class="hb" data-w="${esc(x.ward)}" title="${esc(x.full)}">
+        <span class="nm">${esc(x.full)}<small>บันทึกแล้ว ${x.all - x.wait}/${x.all}${x.ev ? ` · ผ่าน ${x.pass}/${x.ev}` : ''}</small></span>
+        <span class="tr"><i style="width:${pct}%;background:${col}"></i></span>
+        <span class="pv" style="color:${x.rate == null ? 'var(--muted)' : col}">${x.rate == null ? '—' : x.rate + '%'}</span></button>`;
+    }).join('') || '<div class="empty">ไม่มีหน่วยงาน</div>';
+    return;
+  }
+  box.style.height = '300px';
+  chMain.$meta = g; chMain.data.labels = g.map(x => x.label);
   chMain.data.datasets[0].data = g.map(x => x.rate ?? 0);
   chMain.data.datasets[0].backgroundColor = g.map(x => x.rate == null ? '#cbd5e1' : rateColor(x.rate));
   chMain.update();
@@ -969,7 +984,7 @@ function escapeInApp() {
   return true;
 }
 
-const APP_VERSION = '2026.10.26-4';
+const APP_VERSION = '2026.10.26-5';
 async function boot() {
   if ($('ver')) $('ver').textContent = 'เวอร์ชัน ' + APP_VERSION;
   const gn = document.querySelector('.gate-note'); if (gn) gn.insertAdjacentHTML('beforeend', '<br><span style="opacity:.6">เวอร์ชัน ' + APP_VERSION + '</span>');

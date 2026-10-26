@@ -364,3 +364,14 @@
     .me-btn{padding:5px}
     .live span{display:none}
   }
+
+  /* แถบร้อยละรายหน่วยงาน (HTML) */
+  .hbars{display:grid;gap:4px}
+  .hb{display:grid;grid-template-columns:minmax(120px,34%) 1fr 52px;align-items:center;gap:12px;border:none;background:none;padding:8px 6px;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:10px;transition:.15s;width:100%}
+  .hb:hover{background:#f3f9f9}
+  .hb .nm{font-size:14.5px;font-weight:600;line-height:1.35;color:var(--ink);word-break:break-word}
+  .hb .nm small{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:1px}
+  .hb .tr{height:16px;background:#edf3f5;border-radius:8px;overflow:hidden}
+  .hb .tr i{display:block;height:100%;border-radius:8px;transition:width .4s}
+  .hb .pv{font-family:'Prompt',sans-serif;font-weight:600;font-size:15px;text-align:right}
+  @media (max-width:640px){ .hb{grid-template-columns:42% 1fr 44px;gap:8px;padding:8px 2px} .hb .nm{font-size:14px} }
